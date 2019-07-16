@@ -61,9 +61,10 @@ def parse_via_file(viafile, imdir, outdir):
     fh = open(viafile)
     content = json.load(fh)
 
-    for v in content.values():
+    for idx, v in enumerate(content.values()):
         imgpath = os.path.join(imdir, v['filename'])
         outfilename = v['filename'].replace('.jpg', '.png')
+        debug('{}:{}'.format(idx, outfilename))
         outpath = os.path.join(outdir, outfilename)
         w, h = Image.open(imgpath).size
         
