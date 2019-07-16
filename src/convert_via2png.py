@@ -26,28 +26,31 @@ def parse_via_entry(entry, w, h):
 
     labels_ids = {'background': 0, 'tag': 1, 'frame': 2, 'sign': 3}
 
+    i = 0
     polys = []
     for annot in entry['regions'].values():
         shp = annot['shape_attributes']
         if shp['name'] != 'polygon': continue
         _class = annot['region_attributes']['class']
-        x = shp['all_points_x']
-        y = shp['all_points_y']
+        x = shp['all_points_x'] # horiz
+        y = shp['all_points_y'] # vert
         coords = [ (i, j) for i, j in zip(x, y)]
-
         polys.append((_class, Polygon(coords)))
 
-    coords = list(itertools.product(range(w), range(h)))
+    pixels = list(itertools.product(range(w), range(h)))
 
-    mask = np.zeros((w, h), dtype=int)
+    mask = np.zeros((h, w), dtype=int)
 
-    for coord in coords:
+    for coord in pixels:
         p = Point(coord)
         for _class, poly in polys:
+            if _class == 'sign' and p.x == 47 and p.y == 159:
+                print(poly.contains(p))
+                print(poly.contains(Point(159, 47)))
             if poly.contains(p):
                 label = labels_ids[_class]
                 mask[coord[1], coord[0]] = label
-                break
+                break # We assume one label for pixel.
 
     return np.uint8(mask)
 
@@ -63,11 +66,13 @@ def parse_via_file(viafile, imdir, outdir):
 
     for v in content.values():
         imgpath = os.path.join(imdir, v['filename'])
-        outfilename = os.path.join(outdir, imgpath.replace('.jpg', '.png'))
+        outfilename = v['filename'].replace('.jpg', '.png')
+        outpath = os.path.join(outdir, outfilename)
         w, h = Image.open(imgpath).size
         
         mask = parse_via_entry(v, w, h)
-        Image.fromarray(mask).save(outfilename)
+        Image.fromarray(mask).save(outpath)
+        Image.fromarray(mask*60).save(os.path.join('/tmp', outfilename))
     fh.close()
 
 def main():
