@@ -44,9 +44,6 @@ def parse_via_entry(entry, w, h):
     for coord in pixels:
         p = Point(coord)
         for _class, poly in polys:
-            if _class == 'sign' and p.x == 47 and p.y == 159:
-                print(poly.contains(p))
-                print(poly.contains(Point(159, 47)))
             if poly.contains(p):
                 label = labels_ids[_class]
                 mask[coord[1], coord[0]] = label
@@ -72,7 +69,7 @@ def parse_via_file(viafile, imdir, outdir):
         
         mask = parse_via_entry(v, w, h)
         Image.fromarray(mask).save(outpath)
-        Image.fromarray(mask*60).save(os.path.join('/tmp', outfilename))
+        #Image.fromarray(mask*60).save(os.path.join('/tmp', outfilename))
     fh.close()
 
 def main():
