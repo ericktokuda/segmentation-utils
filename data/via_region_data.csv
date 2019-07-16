@@ -1,3 +1,0 @@
-#filename,file_size,file_attributes,region_count,region_id,region_shape_attributes,region_attributes
-test.png,2879,"{}",2,0,"{""name"":""polygon"",""all_points_x"":[20,7,34,20],""all_points_y"":[12,37,37,12]}","{""class"":""tag""}"
-test.png,2879,"{}",2,1,"{""name"":""polygon"",""all_points_x"":[65,59,37,48,67,83,80,69,78,65],""all_points_y"":[36,52,66,92,83,97,63,65,56,36]}","{""class"":""tag""}"
