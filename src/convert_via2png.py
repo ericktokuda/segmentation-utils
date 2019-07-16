@@ -11,8 +11,9 @@ import json
 from shapely.geometry import Point, Polygon
 import itertools
 from PIL import Image
+from multiprocessing import Pool
 
-def parse_via_entry(entry, w, h):
+def parse_via_entry(_arg):
     """Parse via line 
 
     Args:
@@ -24,7 +25,18 @@ def parse_via_entry(entry, w, h):
     np.ndarray: labels array in UINT8
     """
 
+    imdir, outdir, entry = _arg
+
     labels_ids = {'background': 0, 'tag': 1, 'frame': 2, 'sign': 3}
+
+    imgpath = os.path.join(imdir, entry['filename'])
+    outfilename = entry['filename'].replace('.jpg', '.png')
+    #debug('{}:{}'.format(idx, outfilename))
+    outpath = os.path.join(outdir, outfilename)
+
+    if os.path.exists(outpath): return
+
+    w, h = Image.open(imgpath).size
 
     i = 0
     polys = []
@@ -49,9 +61,11 @@ def parse_via_entry(entry, w, h):
                 mask[coord[1], coord[0]] = label
                 break # We assume one label for pixel.
 
-    return np.uint8(mask)
+    mask = np.uint8(mask)
+    Image.fromarray(mask).save(outpath)
+    #return np.uint8(mask)
 
-def parse_via_file(viafile, imdir, outdir):
+def parse_via_file_parallel(viafile, imdir, outdir, N):
     """Parse via file in json format
 
     Args:
@@ -60,30 +74,26 @@ def parse_via_file(viafile, imdir, outdir):
 
     fh = open(viafile)
     content = json.load(fh)
+    files = list(content.values())
+    args = [ (imdir, outdir, x) for x in files ]
 
-    for idx, v in enumerate(content.values()):
-        imgpath = os.path.join(imdir, v['filename'])
-        outfilename = v['filename'].replace('.jpg', '.png')
-        debug('{}:{}'.format(idx, outfilename))
-        outpath = os.path.join(outdir, outfilename)
-        w, h = Image.open(imgpath).size
-        
-        mask = parse_via_entry(v, w, h)
-        Image.fromarray(mask).save(outpath)
-        #Image.fromarray(mask*60).save(os.path.join('/tmp', outfilename))
+    with Pool(N) as p:
+        print(p.map(parse_via_entry, args))
+
     fh.close()
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('viafile', help='Path to via file in JSON format.')
     parser.add_argument('imdir', help='Path to images referenced in the via file')
-    args = parser.parse_args()
+    parser.add_argument('outdir', help='Outputdir')
+    N = 5
 
-    outdir = '/tmp/'
+    args = parser.parse_args()
 
     logging.basicConfig(format='[%(asctime)s] %(message)s',
     datefmt='%Y%m%d %H:%M', level=logging.DEBUG)
-    parse_via_file(args.viafile, args.imdir, outdir)
+    parse_via_file_parallel(args.viafile, args.imdir, args.outdir, N)
 
 if __name__ == "__main__":
     main()
