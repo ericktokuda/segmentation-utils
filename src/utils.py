@@ -3,6 +3,7 @@
 """
 
 import os
+from os.path import join as pjoin
 import argparse
 import logging
 from logging import debug
@@ -12,7 +13,18 @@ from shapely.geometry import Point, Polygon
 import itertools
 from PIL import Image
 from multiprocessing import Pool
+import inspect
+from datetime import datetime
+import sys
+import imageio
+import pandas as pd
 
+#############################################################
+def info(*args):
+    pref = datetime.now().strftime('[%y%m%d %H:%M:%S]')
+    print(pref, *args, file=sys.stdout)
+
+#############################################################
 def parse_via_entry(_arg):
     """Parse via line 
 
@@ -65,6 +77,7 @@ def parse_via_entry(_arg):
     Image.fromarray(mask).save(outpath)
     #return np.uint8(mask)
 
+#############################################################
 def parse_via_file_parallel(viafile, imdir, outdir, N):
     """Parse via file in json format
 
@@ -82,6 +95,42 @@ def parse_via_file_parallel(viafile, imdir, outdir, N):
 
     fh.close()
 
+#############################################################
+def calculate_miou(gtruth, pred):
+    inter = np.logical_and(gtruth, pred)
+    union = np.logical_or(gtruth, pred)
+    return np.sum(inter) / np.sum(union)
+
+#############################################################
+def calculate_miou_batch(preddir, gtruthdir, outpath):
+    """Calculate miou for each file and save in out
+
+    Args:
+    preddir(str): pred dir
+    gtruthdir(str): gtruth dir
+    outpath(str): csv output path
+    """
+    info(inspect.stack()[0][3] + '()')
+
+    files = []
+    for f in sorted(os.listdir(preddir)):
+        if f.endswith('.png'): files.append(f)
+
+    n = len(files)
+    ious = np.ndarray(n, dtype=float)
+    for i, f in enumerate(files):
+        pred = imageio.imread(pjoin(preddir, f))
+        gtruth = imageio.imread(pjoin(gtruthdir, f))
+        ious[i] = calculate_miou(pred, gtruth)
+
+    dfdict = dict(
+            id = files,
+            iou = ious,
+            )
+    df = pd.DataFrame(dfdict)
+    df.to_csv(outpath, index=False)
+
+#############################################################
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('viafile', help='Path to via file in JSON format.')
